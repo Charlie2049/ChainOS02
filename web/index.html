@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onchain Copilot - Web Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="topbar">
+      <div>
+        <h1>🦞 Onchain Copilot</h1>
+        <p class="sub" data-i18n="subtitle">一句话生成链上执行计划（MVP Demo）</p>
+      </div>
+      <button id="lang" class="ghost">EN</button>
+    </header>
+
+    <label class="scenario-picker">
+      <span data-i18n="scenario">场景</span>
+      <select id="scenario">
+        <option value="auto" selected data-i18n="scenario_auto">自动识别</option>
+        <option value="trading" data-i18n="scenario_trading">交易版</option>
+        <option value="operations" data-i18n="scenario_operations">运营版</option>
+        <option value="payment" data-i18n="scenario_payment">支付版</option>
+      </select>
+    </label>
+
+    <textarea id="prompt" rows="4">帮我分3笔买入ETH，总预算1000USDT，30分钟一笔，滑点不超过0.8%</textarea>
+    <div class="row">
+      <button id="gen" data-i18n="gen">生成计划</button>
+      <button id="sample" class="ghost" data-i18n="sample">换个示例</button>
+    </div>
+
+    <section class="grid3">
+      <article class="card">
+        <h3 data-i18n="intent">意图解析</h3>
+        <div id="intent"></div>
+      </article>
+      <article class="card">
+        <h3 data-i18n="risk">风控检查</h3>
+        <div id="risk"></div>
+      </article>
+      <article class="card">
+        <h3 data-i18n="status">执行状态</h3>
+        <div id="status" class="status">⏳ 等待生成计划</div>
+      </article>
+    </section>
+
+    <section class="card">
+      <h3 data-i18n="plan">执行步骤</h3>
+      <div id="steps"></div>
+      <div class="row">
+        <button id="confirm" disabled data-i18n="confirm">确认执行</button>
+        <button id="reset" class="ghost" data-i18n="reset">重置</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>JSON</h3>
+      <pre id="output">点击“生成计划”...</pre>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

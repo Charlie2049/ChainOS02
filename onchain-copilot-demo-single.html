@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Onchain Copilot - Single File Demo</title>
+  <style>
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e9eefc;margin:0}
+    .container{max-width:980px;margin:30px auto;padding:18px}
+    .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    h1{margin:0 0 8px;font-size:30px}.sub{opacity:.8;margin:0 0 16px}
+    textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #2a355f;background:#101a33;color:#e9eefc}
+    .row{display:flex;gap:10px;margin:12px 0 6px;flex-wrap:wrap}
+    button{padding:10px 14px;border:0;border-radius:10px;background:#3b82f6;color:white;cursor:pointer}
+    button.ghost{background:#334155}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+    .card{background:#0f172a;border:1px solid #24324f;padding:14px;border-radius:12px;margin:12px 0}
+    .card h3{margin:2px 0 10px}
+    .kv{display:flex;justify-content:space-between;border-bottom:1px dashed #2a355f;padding:6px 0;font-size:14px}
+    .kv:last-child{border-bottom:0}
+    .tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#1f2a44;font-size:12px;margin-right:6px}
+    .step{display:flex;justify-content:space-between;align-items:center;border:1px solid #2a355f;border-radius:10px;padding:10px;margin:8px 0;background:#101a33}
+    .step.done{border-color:#16a34a;background:#0f2d1f}
+    .status{font-weight:600}
+    pre{white-space:pre-wrap;background:#0b1224;border:1px solid #24324f;padding:12px;border-radius:10px;line-height:1.35}
+    @media (max-width: 820px){.grid3{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header class="topbar">
+      <div>
+        <h1>🦞 Onchain Copilot</h1>
+        <p class="sub" data-i18n="subtitle">一句话生成链上执行计划（MVP Demo）</p>
+      </div>
+      <button id="lang" class="ghost">EN</button>
+    </header>
+
+    <textarea id="prompt" rows="4">帮我分3笔买入ETH，总预算1000USDT，30分钟一笔，滑点不超过0.8%</textarea>
+    <div class="row">
+      <button id="gen" data-i18n="gen">生成计划</button>
+      <button id="sample" class="ghost" data-i18n="sample">换个示例</button>
+    </div>
+
+    <section class="grid3">
+      <article class="card">
+        <h3 data-i18n="intent">意图解析</h3>
+        <div id="intent"></div>
+      </article>
+      <article class="card">
+        <h3 data-i18n="risk">风控检查</h3>
+        <div id="risk"></div>
+      </article>
+      <article class="card">
+        <h3 data-i18n="status">执行状态</h3>
+        <div id="status" class="status">⏳ 等待生成计划</div>
+      </article>
+    </section>
+
+    <section class="card">
+      <h3 data-i18n="plan">执行步骤</h3>
+      <div id="steps"></div>
+      <div class="row">
+        <button id="confirm" disabled data-i18n="confirm">确认执行</button>
+        <button id="reset" class="ghost" data-i18n="reset">重置</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>JSON</h3>
+      <pre id="output">点击“生成计划”...</pre>
+    </section>
+  </main>
+
+  <script>
+    const el = (id) => document.getElementById(id);
+    const i18n = {
+      zh: {
+        subtitle: '一句话生成链上执行计划（MVP Demo）', gen: '生成计划', sample: '换个示例',
+        intent: '意图解析', risk: '风控检查', status: '执行状态', plan: '执行步骤',
+        confirm: '确认执行', reset: '重置', waiting: '⏳ 等待生成计划', planned: '✅ 计划已生成，待确认',
+        executing: '🚀 执行中...', done: '🎉 执行完成（演示模式）', note:'Web demo only. 接入 OnchainOS API 后可执行真实链上动作。'
+      },
+      en: {
+        subtitle: 'One-line intent to onchain execution plan (MVP Demo)', gen: 'Generate Plan', sample: 'Try Sample',
+        intent: 'Intent', risk: 'Risk Checks', status: 'Execution Status', plan: 'Execution Steps',
+        confirm: 'Confirm Execute', reset: 'Reset', waiting: '⏳ Waiting for plan', planned: '✅ Plan ready, waiting for confirmation',
+        executing: '🚀 Executing...', done: '🎉 Execution completed (demo mode)', note:'Web demo only. Connect OnchainOS APIs for real execution.'
+      }
+    };
+
+    let lang = 'zh';
+    let currentPlan = null;
+    function t(k){ return i18n[lang][k] || k; }
+
+    function applyI18n(){
+      document.querySelectorAll('[data-i18n]').forEach(n => n.textContent = t(n.dataset.i18n));
+      el('lang').textContent = lang === 'zh' ? 'EN' : '中';
+      if (!currentPlan) el('status').textContent = t('waiting');
+    }
+
+    function parseIntent(text){
+      const raw = text.toLowerCase();
+      const intent = { asset: raw.includes('btc') ? 'BTC' : 'ETH', side: 'BUY', budget_usdt: 1000, tranches: 3, interval_min: 30, max_slippage_pct: 0.8 };
+      const mBudget = raw.match(/(\d+(?:\.\d+)?)\s*usdt/); if(mBudget) intent.budget_usdt = Number(mBudget[1]);
+      const mTr = text.match(/(?:分|in\s*)(\d+)\s*(?:笔|parts?)/i); if(mTr) intent.tranches = Number(mTr[1]);
+      const mInt = text.match(/(\d+)\s*(?:分钟|min)/i); if(mInt) intent.interval_min = Number(mInt[1]);
+      const mSlip = text.match(/(?:滑点|slippage)[^\d]*(\d+(?:\.\d+)?)\s*%/i); if(mSlip) intent.max_slippage_pct = Number(mSlip[1]);
+      return intent;
+    }
+
+    function buildPlan(intent){
+      const per = +(intent.budget_usdt / intent.tranches).toFixed(2);
+      const amounts = Array(intent.tranches).fill(per);
+      amounts[amounts.length-1] = +(intent.budget_usdt - amounts.slice(0,-1).reduce((a,b)=>a+b,0)).toFixed(2);
+      const execution_plan = amounts.map((amt, idx)=>({ step: idx+1, action:`Swap USDT -> ${intent.asset}`, amount_usdt:amt, delay_min:idx*intent.interval_min, done:false }));
+      return {
+        intent,
+        execution_plan,
+        risk_checks: { max_slippage_pct:intent.max_slippage_pct, max_gas_usdt:5, position_limit_pct:20, require_confirm:true },
+        note: t('note')
+      };
+    }
+
+    function kvHtml(obj){
+      return Object.entries(obj).map(([k,v])=>`<div class="kv"><span>${k}</span><strong>${v}</strong></div>`).join('');
+    }
+
+    function render(plan){
+      el('intent').innerHTML = kvHtml(plan.intent);
+      el('risk').innerHTML = kvHtml(plan.risk_checks);
+      el('steps').innerHTML = plan.execution_plan.map(s => `
+        <div class="step ${s.done ? 'done' : ''}" data-step="${s.step}">
+          <div><span class="tag">#${s.step}</span> ${s.action}</div>
+          <div>${s.amount_usdt} USDT · T+${s.delay_min}m</div>
+        </div>
+      `).join('');
+      el('output').textContent = JSON.stringify(plan, null, 2);
+    }
+
+    function generate(){
+      currentPlan = buildPlan(parseIntent(el('prompt').value.trim()));
+      render(currentPlan);
+      el('status').textContent = t('planned');
+      el('confirm').disabled = false;
+    }
+
+    async function runDemoExecution(){
+      if(!currentPlan) return;
+      el('status').textContent = t('executing');
+      el('confirm').disabled = true;
+      for (const step of currentPlan.execution_plan){
+        await new Promise(r=>setTimeout(r, 500));
+        step.done = true;
+        render(currentPlan);
+      }
+      el('status').textContent = t('done');
+    }
+
+    function resetAll(){
+      currentPlan = null;
+      el('intent').innerHTML = '';
+      el('risk').innerHTML = '';
+      el('steps').innerHTML = '';
+      el('output').textContent = '点击“生成计划”...';
+      el('status').textContent = t('waiting');
+      el('confirm').disabled = true;
+    }
+
+    el('gen').addEventListener('click', generate);
+    el('sample').addEventListener('click', ()=>{
+      el('prompt').value = lang === 'zh'
+        ? '帮我分4笔买入BTC，总预算2000USDT，15分钟一笔，滑点不超过0.5%'
+        : 'Buy BTC in 4 parts, total 2000 USDT, 15 min interval, slippage under 0.5%';
+      generate();
+    });
+    el('confirm').addEventListener('click', runDemoExecution);
+    el('reset').addEventListener('click', resetAll);
+    el('lang').addEventListener('click', ()=>{ lang = lang === 'zh' ? 'en' : 'zh'; applyI18n(); if (currentPlan) generate(); });
+
+    applyI18n();
+  </script>
+</body>
+</html>
