@@ -3,64 +3,185 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Onchain Copilot - Web Demo</title>
+  <title>Onchain Copilot · 链上副驾驶</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <main class="container">
-    <header class="topbar">
-      <div>
-        <h1>🦞 Onchain Copilot</h1>
-        <p class="sub" data-i18n="subtitle">一句话生成链上执行计划（MVP Demo）</p>
+  <header class="hero">
+    <nav class="nav">
+      <div class="logo">🦞 Onchain Copilot</div>
+      <div class="nav-links">
+        <a href="#versions">版本</a>
+        <a href="#demo">交互演示</a>
+        <a href="#next">下一步</a>
+        <a class="ghost" href="../README.md" target="_blank">项目文档</a>
       </div>
-      <button id="lang" class="ghost">EN</button>
-    </header>
-
-    <label class="scenario-picker">
-      <span data-i18n="scenario">场景</span>
-      <select id="scenario">
-        <option value="auto" selected data-i18n="scenario_auto">自动识别</option>
-        <option value="trading" data-i18n="scenario_trading">交易版</option>
-        <option value="operations" data-i18n="scenario_operations">运营版</option>
-        <option value="payment" data-i18n="scenario_payment">支付版</option>
-      </select>
-    </label>
-
-    <textarea id="prompt" rows="4">帮我分3笔买入ETH，总预算1000USDT，30分钟一笔，滑点不超过0.8%</textarea>
-    <div class="row">
-      <button id="gen" data-i18n="gen">生成计划</button>
-      <button id="sample" class="ghost" data-i18n="sample">换个示例</button>
+    </nav>
+    <div class="hero-body">
+      <div class="hero-copy">
+        <p class="eyebrow">MVP · OnchainOS 原生 Agent</p>
+        <h1>一句话描述，链上副驾驶为你执行：行情 → 策略 → 风控 → 支付。</h1>
+        <p class="lead">交易、运营、支付三种场景一次覆盖。自然语言生成可执行计划，可解释、可确认、可复盘。</p>
+        <div class="hero-ctas">
+          <a class="btn" href="#demo">⚡️ 立即体验 Demo</a>
+          <a class="btn ghost" href="../docs/PRD.md" target="_blank">查看 PRD</a>
+        </div>
+        <ul class="badges">
+          <li>🪙 行情 + 交易</li>
+          <li>📣 运营自动化</li>
+          <li>💸 链上支付</li>
+          <li>🛡️ 风控检查</li>
+        </ul>
+      </div>
+      <div class="hero-card">
+        <p class="mini-title">MVP 状态</p>
+        <h3>V2 · 场景可切换</h3>
+        <ul>
+          <li>✅ CLI & Web Demo</li>
+          <li>✅ Mock OnchainOS 能力</li>
+          <li>🟡 待接真实 API</li>
+          <li>🟡 风控插件化</li>
+        </ul>
+        <p class="mini-title">一句话</p>
+        <p>“用户用自然语言说需求，Agent 帮他完成：看行情 → 出策略 → 风控检查 → 一键执行 → 自动复盘。”</p>
+      </div>
     </div>
+  </header>
 
-    <section class="grid3">
+  <section class="section" id="versions">
+    <div class="section-head">
+      <h2>最适合落地的 3 个版本</h2>
+      <p>同一套引擎，根据场景切换策略与风控。</p>
+    </div>
+    <div class="cards">
       <article class="card">
-        <h3 data-i18n="intent">意图解析</h3>
-        <div id="intent"></div>
+        <p class="tag">交易版</p>
+        <h3>分批交易 + 风控</h3>
+        <p>输入“帮我分 3 笔买入 ETH，回撤 5% 停手”，即可获得行情快照 + 执行步骤 + 滑点/Gas/仓位检查。</p>
+        <ul>
+          <li>TWAP / TCA 计划</li>
+          <li>回撤、滑点、Gas 阈值</li>
+          <li>复盘摘要与提醒</li>
+        </ul>
       </article>
       <article class="card">
-        <h3 data-i18n="risk">风控检查</h3>
-        <div id="risk"></div>
+        <p class="tag">运营版</p>
+        <h3>热点 + 内容 + 观察</h3>
+        <p>自动抓 Crypto 热点，生成可直接发布的 X 文案，并附带交易观察列表与免责声明。</p>
+        <ul>
+          <li>热点聚合 + 情绪摘要</li>
+          <li>X / 小红书可发模板</li>
+          <li>交易观察 + 提醒</li>
+        </ul>
       </article>
       <article class="card">
-        <h3 data-i18n="status">执行状态</h3>
-        <div id="status" class="status">⏳ 等待生成计划</div>
+        <p class="tag">支付版</p>
+        <h3>链上支付助手</h3>
+        <p>输入“给地址 A 打 100 USDT，Gas 超过阈值延后”，即可获得 Quote、合规扫描、Gas Cap 对比与回执。</p>
+        <ul>
+          <li>Gas 费用 + ETA</li>
+          <li>黑名单/合规检查</li>
+          <li>支付回执 + 记账</li>
+        </ul>
       </article>
-    </section>
+    </div>
+  </section>
 
-    <section class="card">
-      <h3 data-i18n="plan">执行步骤</h3>
-      <div id="steps"></div>
-      <div class="row">
-        <button id="confirm" disabled data-i18n="confirm">确认执行</button>
-        <button id="reset" class="ghost" data-i18n="reset">重置</button>
+  <section class="section" id="demo">
+    <div class="section-head">
+      <h2>交互式 Demo</h2>
+      <p>左边输入自然语言，右边实时生成执行计划。无需后端，纯前端演示。</p>
+    </div>
+    <div class="demo">
+      <div class="demo-left">
+        <div class="scenario-tabs">
+          <button data-scenario="trading" class="active">交易版</button>
+          <button data-scenario="operations">运营版</button>
+          <button data-scenario="payment">支付版</button>
+          <button data-scenario="auto" class="ghost">自动识别</button>
+        </div>
+        <label class="field">
+          <span>自然语言需求</span>
+          <textarea id="prompt" rows="5">帮我分3笔买入ETH，总预算1000USDT，30分钟一笔，滑点不超过0.8%，回撤5%停手。</textarea>
+        </label>
+        <div class="chips" id="quick-prompts">
+          <button data-prompt="帮我分3笔买入ETH，总预算1000USDT，30分钟一笔，回撤5%停手。">交易示例</button>
+          <button data-prompt="抓 3 个 Crypto 热点，生成 X 可发内容，并附交易观察提醒。">运营示例</button>
+          <button data-prompt="给 0xAbC12345... 打 100 USDT，gas 超 8 USDT 就延后执行。">支付示例</button>
+        </div>
+        <div class="row">
+          <button id="generate">⚡️ 生成计划</button>
+          <button id="reset" class="ghost">重置</button>
+        </div>
+        <p class="small">提示：右侧展示结构化意图、风控检查、执行步骤与 JSON，可直接作为前端/后端对接数据。</p>
       </div>
-    </section>
+      <div class="demo-right">
+        <div class="status">
+          <p class="eyebrow">当前计划</p>
+          <h3 id="statusTitle">尚未生成计划</h3>
+          <p id="statusMeta">点击“生成计划”开始。</p>
+        </div>
+        <div class="plan-grid">
+          <article>
+            <h4>意图解析</h4>
+            <div id="intentBlock" class="kv"></div>
+          </article>
+          <article>
+            <h4>风控检查</h4>
+            <div id="riskBlock" class="kv"></div>
+          </article>
+        </div>
+        <article>
+          <h4>执行步骤</h4>
+          <div id="stepsBlock" class="steps"></div>
+        </article>
+        <article>
+          <h4>后续动作</h4>
+          <ul id="followBlock"></ul>
+        </article>
+        <article>
+          <h4>JSON 输出</h4>
+          <pre id="jsonOutput">{}</pre>
+        </article>
+      </div>
+    </div>
+  </section>
 
-    <section class="card">
-      <h3>JSON</h3>
-      <pre id="output">点击“生成计划”...</pre>
-    </section>
-  </main>
+  <section class="section" id="next">
+    <div class="section-head">
+      <h2>如何继续？</h2>
+      <p>当前网站是可运行的 MVP：静态托管即可对外展示，命令行版本也已就绪。</p>
+    </div>
+    <div class="next-grid">
+      <article>
+        <h3>运行 CLI</h3>
+        <pre><code>cd onchain-copilot
+python3 src/copilot.py --mode trading --text "帮我分3笔买入ETH..."</code></pre>
+      </article>
+      <article>
+        <h3>部署 Web</h3>
+        <ol>
+          <li>`cd onchain-copilot/web`</li>
+          <li>`python3 -m http.server 8787` 本地预览</li>
+          <li>将 `web/` 静态文件上传到 GitHub Pages / Vercel / Netlify / Cloudflare Pages</li>
+        </ol>
+      </article>
+      <article>
+        <h3>接入 OnchainOS</h3>
+        <ul>
+          <li>在 `src/copilot/services.py` 替换 mock 为真实 SDK</li>
+          <li>扩展策略/风控插件，沉淀为可执行工作流</li>
+          <li>记录执行日志，生成自动复盘</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <p>Onchain Copilot · 链上副驾驶 · V2</p>
+    <p>Made for OKX OnchainOS AI 宋 · 由自然语言驱动的链上操作助手</p>
+  </footer>
+
   <script src="./app.js"></script>
 </body>
 </html>
