@@ -6,7 +6,7 @@ from dataclasses import asdict
 from typing import Any, Dict, List
 
 from .intents import ParsedIntent
-from .services import MarketSnapshot, OnchainOSClient
+from .services import OnchainOSClient
 
 
 class PipelineBuilder:
@@ -30,13 +30,15 @@ class PipelineBuilder:
         for idx in range(tranches):
             delay = idx * params["interval_min"]
             amount = per if idx < tranches - 1 else round(params["budget_usdt"] - per * (tranches - 1), 2)
-            steps.append({
-                "id": idx + 1,
-                "action": f"{params['side']} {params['asset']}",
-                "amount_usdt": amount,
-                "delay_min": delay,
-                "checks": ["slippage", "twap"],
-            })
+            steps.append(
+                {
+                    "id": idx + 1,
+                    "action": f"{params['side']} {params['asset']}",
+                    "amount_usdt": amount,
+                    "delay_min": delay,
+                    "checks": ["slippage", "twap"],
+                }
+            )
         risk = [
             {
                 "name": "Slippage",
@@ -49,9 +51,9 @@ class PipelineBuilder:
                 "status": "OK",
             },
             {
-                "name": "Gas",
-                "value": "< 5 USDT",
-                "status": "OK",
+                "name": "Market",
+                "value": f"24h 变化 {snapshot.change_24h_pct:+.2f}%",
+                "status": "Watch" if abs(snapshot.change_24h_pct) > 5 else "OK",
             },
         ]
         follow_up = [
@@ -71,12 +73,12 @@ class PipelineBuilder:
 
     def _build_operations(self, intent: ParsedIntent) -> Dict[str, Any]:
         params = intent.parameters
-        topics = self.client.trending_topics(params["topics"])
-        watchlist = self.client.watchlist_candidates() if params["include_watchlist"] else []
+        topics = self.client.trending_topics(params["topics"], chain=params["chain"])
+        watchlist = self.client.watchlist_candidates(chain=params["chain"]) if params["include_watchlist"] else []
         steps = [
             {
                 "id": 1,
-                "action": "抓取热点",
+                "action": f"抓取 {params['chain']} 热点",
                 "output": topics,
             },
             {
@@ -86,11 +88,13 @@ class PipelineBuilder:
             },
         ]
         if watchlist:
-            steps.append({
-                "id": 3,
-                "action": "交易观察",
-                "output": watchlist,
-            })
+            steps.append(
+                {
+                    "id": 3,
+                    "action": "交易观察",
+                    "output": watchlist,
+                }
+            )
         risk = [
             {"name": "事实核验", "status": "Pending human", "value": "AI 草稿需人工确认"},
             {"name": "交易免责声明", "status": "Auto", "value": "默认附带"},
@@ -111,13 +115,19 @@ class PipelineBuilder:
 
     def _build_payment(self, intent: ParsedIntent) -> Dict[str, Any]:
         params = intent.parameters
-        quote = self.client.payment_quote(params["token"], params["amount"])
+        quote = self.client.payment_quote(chain=params["chain"], token=params["token"], amount=params["amount"])
         compliance = self.client.compliance_scan(params["recipient"])
         steps = [
             {
                 "id": 1,
-                "action": "Quote",
-                "details": quote,
+                "action": f"Gas 状态（{params['chain']})",
+                "details": {
+                    "normal_gwei": quote.get("gas_normal_gwei"),
+                    "min_gwei": quote.get("gas_min_gwei"),
+                    "max_gwei": quote.get("gas_max_gwei"),
+                    "est_transfer_usd": quote.get("est_transfer_usd"),
+                    "eip1559": quote.get("supports_eip1559"),
+                },
             },
             {
                 "id": 2,
@@ -128,16 +138,17 @@ class PipelineBuilder:
                 "id": 3,
                 "action": "Sign & Broadcast",
                 "details": {
-                    "max_gas": params["max_gas_usd"],
+                    "max_gas_usd": params["max_gas_usd"],
                     "priority": params["priority"],
+                    "chain": params["chain"],
                 },
             },
         ]
         risk = [
             {
-                "name": "Gas cap",
-                "value": f"{quote['gas_usd']} / {params['max_gas_usd']} USDT",
-                "status": "OK" if quote["gas_usd"] <= params["max_gas_usd"] else "Hold",
+                "name": "Gas 估算",
+                "value": f"≈ ${quote.get('est_transfer_usd', 0):.2f} / 阈值 {params['max_gas_usd']} USDT",
+                "status": "OK" if quote.get("est_transfer_usd", 0) <= params["max_gas_usd"] else "Hold",
             },
             {
                 "name": "Compliance",

@@ -59,7 +59,9 @@ class IntentParser:
         interval = self._extract_interval(text)
         slippage = self._extract_float(text, r"(?:滑点|slippage)[^\d]*(\d+(?:\.\d+)?)\s*%", default=0.8)
         stop_loss = self._extract_float(text, r"(?:回撤|止损|stop)\D*(\d+(?:\.\d+)?)\s*%", default=5.0)
-
+        chain = self._detect_chain_hint(lowered)
+        if asset == "SOL":
+            chain = "solana"
         summary = f"{side} {asset} in {tranches} tranches with {budget} USDT budget"
         params = {
             "asset": asset,
@@ -69,6 +71,7 @@ class IntentParser:
             "interval_min": interval,
             "max_slippage_pct": slippage,
             "max_drawdown_pct": stop_loss,
+            "chain": chain,
         }
         return ParsedIntent("trading", summary, params)
 
@@ -84,12 +87,14 @@ class IntentParser:
         cadence = "每日"
         if "每周" in text or "weekly" in lowered:
             cadence = "每周"
-        summary = f"Generate {topics} hot topics & X-ready copy with {cadence} cadence"
+        chain = self._detect_chain_hint(lowered)
+        summary = f"{chain} hot topics x {cadence} cadence"
         params = {
             "topics": topics,
             "channel": channel,
             "include_watchlist": watch,
             "cadence": cadence,
+            "chain": chain,
         }
         return ParsedIntent("operations", summary, params)
 
@@ -101,13 +106,15 @@ class IntentParser:
         recipient = recipient_match.group(1) if recipient_match else "0xABCD...1234"
         gas_threshold = self._extract_float(text, r"gas[^\d]*(\d+(?:\.\d+)?)", default=8.0)
         priority = "defer" if any(k in lowered for k in ["延后", "delay", "wait"]) else "normal"
-        summary = f"Transfer {amount} {token} to {recipient[:10]}..."
+        chain = self._detect_chain_hint(lowered)
+        summary = f"Transfer {amount} {token} to {recipient[:10]}... on {chain}"
         params = {
             "amount": amount,
             "token": token,
             "recipient": recipient,
             "max_gas_usd": gas_threshold,
             "priority": priority,
+            "chain": chain,
         }
         return ParsedIntent("payment", summary, params)
 
@@ -145,3 +152,19 @@ class IntentParser:
         if match:
             return int(match.group(1)) * 60
         return 30
+
+    def _detect_chain_hint(self, lowered: str) -> str:
+        lowered = lowered.lower()
+        if any(k in lowered for k in ["sol", "solana", "索拉"]):
+            return "solana"
+        if any(k in lowered for k in ["bsc", "bnb"]):
+            return "bsc"
+        if any(k in lowered for k in ["polygon", "matic"]):
+            return "polygon"
+        if any(k in lowered for k in ["arbitrum", "arb"]):
+            return "arbitrum"
+        if "base" in lowered:
+            return "base"
+        if any(k in lowered for k in ["xlayer", "okb", "okx"]):
+            return "xlayer"
+        return "ethereum"

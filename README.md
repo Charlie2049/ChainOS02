@@ -32,6 +32,15 @@ python3 -m http.server 8787
 ```
 浏览器端支持：场景切换、示例提示、执行动画以及 JSON 导出。
 
+### 3. OnchainOS 实时数据接入
+1. 安装官方 CLI（一次性）
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh
+   onchainos --version
+   ```
+2. （可选）配置私有 API Key：复制 `.env.example` 为 `.env`，写入 `OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE`。默认会使用官方提供的沙盒 Key。
+3. CLI & Web Demo 会实时调用 `onchainos` 获取行情、热点、Gas 估算等数据。
+
 ## 目录结构
 ```
 onchain-copilot/
@@ -39,6 +48,7 @@ onchain-copilot/
 ├── index.html              # Web Demo 入口（可直接 GitHub Pages 部署）
 ├── styles.css
 ├── app.js
+├── .env.example            # OnchainOS API Key 模板（勿提交真实 .env）
 ├── docs/
 │   ├── PRD.md              # 产品需求 & 赛题映射
 │   ├── DEMO_SCRIPT.md      # 90s 演示脚本（多场景）
@@ -47,20 +57,20 @@ onchain-copilot/
 │   └── ARCHITECTURE.md     # 技术架构与对 OnchainOS 的映射
 └── src/
     ├── copilot.py          # CLI 入口
-    └── copilot/            # 意图解析 + Pipeline + 模拟服务
+    └── copilot/            # 意图解析 + Pipeline + OnchainOS 封装
 ```
 
 ## 当前进度（V2）
 - [x] 产品定义、版本拆解与演示脚本
 - [x] 意图解析：交易 / 运营 / 支付 场景自动识别
-- [x] Pipeline：生成执行步骤 + 风控清单 + 跟进动作（Mock OnchainOS）
-- [x] CLI + Web Demo（可切换场景）
-- [ ] 接入真实 OnchainOS API（行情、交易、钱包、支付、DApp）
+- [x] Pipeline：生成执行步骤 + 风控清单 + 跟进动作
+- [x] CLI + Web Demo（可切换场景 + JSON 输出）
+- [x] 接入 OnchainOS CLI：行情快照 / 热点榜单 / Gas 估算
 - [ ] 风控规则引擎（仓位、滑点、Gas、黑名单）
 - [ ] Demo 视频 + 参赛物料
 
 ## 下一步
-1. **API 对接**：用真实 OnchainOS SDK 替换 `src/copilot/services.py` 的模拟逻辑。
+1. **执行链路打通**：在现有行情/热点/Gas 的基础上，接入 swap / broadcast / wallet balance 等 OnchainOS 命令，完成可签名的真实交易链路。
 2. **策略/风控插件化**：每个步骤支持策略模板和自定义指标。
 3. **DApp 编排**：在 DEX、支付、借贷间组装多步骤工作流。
 4. **回测与复盘**：落库实际执行日志，给出可解释的复盘报告。
