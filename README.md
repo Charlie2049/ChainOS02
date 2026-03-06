@@ -41,6 +41,16 @@ python3 -m http.server 8787
 2. （可选）配置私有 API Key：复制 `.env.example` 为 `.env`，写入 `OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE`。默认会使用官方提供的沙盒 Key。
 3. CLI & Web Demo 会实时调用 `onchainos` 获取行情、热点、Gas 估算等数据。
 
+### 4. 轻量后端 API（FastAPI）
+```bash
+cd onchain-copilot
+pip install -r requirements.txt
+uvicorn api.server:app --reload  # 默认端口 8000
+```
+- POST `http://localhost:8000/plan`，Body：`{ "text": "帮我分3笔买入ETH...", "mode": "trading" }`
+- 返回值即 CLI/Web Demo 使用的 JSON 结构，可直接被前端调用。
+- 记得先安装 OnchainOS CLI（见上一步），后端会复用同一套实时数据。
+
 ## 目录结构
 ```
 onchain-copilot/
@@ -48,7 +58,10 @@ onchain-copilot/
 ├── index.html              # Web Demo 入口（可直接 GitHub Pages 部署）
 ├── styles.css
 ├── app.js
+├── requirements.txt        # FastAPI / Uvicorn
 ├── .env.example            # OnchainOS API Key 模板（勿提交真实 .env）
+├── api/
+│   └── server.py           # FastAPI 轻量后端
 ├── docs/
 │   ├── PRD.md              # 产品需求 & 赛题映射
 │   ├── DEMO_SCRIPT.md      # 90s 演示脚本（多场景）
